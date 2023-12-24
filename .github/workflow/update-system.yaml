@@ -1,0 +1,57 @@
+name: Update system on AWS infrastructure
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-system:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET }}
+      AWS_DEFAULT_REGION: ${{ var.AWS_REGION }}
+      STACK_NAME: "stack-gbaas-prod-${{ var.AWS_REGION }}-1"
+      COREBUCKET_NAME: "corebucket-gbaas-prod-${{ var.AWS_REGION }}-1"
+      TEMPLATE_FILE: "./deploy.yaml"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check CloudFormation Stack
+        run: |
+          if aws cloudformation describe-stacks --stack-name $STACK_NAME; then
+            echo "Valid CloudFormation Stack [$STACK_NAME] found. Starting CI/CD Pipe..."
+          else
+            echo "CloudFormation Stack [$STACK_NAME] not available in a stable state. Exiting CI/CD Pipe..."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: |
+            apt update -y
+            apt install go -y
+
+      - name: Compile and upload function
+        run: |
+          GOOS=linux go build -o main function/main.go
+          zip backupfn.zip main
+          aws s3 cp backupfn.zip s3://$COREBUCKET_NAME/backupfn.zip
+
+      - name: Execute CloudFormation Stack
+        run: |
+            OUTPUT_FILE="./tmp/output.txt"
+
+            aws cloudformation update-stack --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE | tee $OUTPUT_FILE
+            OUTPUT=$(tail -n 2 $OUTPUT_FILE)
+
+            echo "S3_ARN=${echo $OUTPUT | head -n 1}" >> $GITHUB_ENV
+            echo "LAMBDA_ARN=${echo $OUTPUT | tail -n 1}" >> $GITHUB_ENV
+
+      - name: Upload Webapp
+
+      - name: Upload Backup Service
+        run: |
+          {{ env.OUTPUT }}
+          aws lambda update-function-code --function-name myLambdaFunction --zip-file fileb://./myLambdaCode.zip

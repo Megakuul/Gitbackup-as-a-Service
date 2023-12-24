@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: GBaaS Infrastructure
+
+Resources:
+  # Core bucket, containing current backups and the internal data (like the frontend code)
+  CoreBucket:
+    Type: 'AWS::S3::Bucket'
+    # DeletionPolicy: Retain // Add to not delete the bucket when deleting the stack
+    Properties:
+      BucketName: !Sub 'corebucket-gbaas-prod-${AWS::Region}-1'
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Status: Enabled
+            NoncurrentVersionExpiration:
+              - NoncurrentDays: 3
+      ReplicationConfiguration:
+        Role: !GetAtt
+          - DeepArchiveReplicationRole
+          - Arn
+        Rules:
+          - Destination:
+              Bucket: !Sub 'arn:aws:s3:::${DeepArchiveBucket}'
+              StorageClass: DEEP_ARCHIVE
+            Filter:
+              # This is the path where the repositorys are stored
+              Prefix: "repos/"
+            Status: Enabled
+            
+  # Deep Archive bucket, where backups are replicated to
+  DeepArchiveBucket:
+    Type: 'AWS::S3::Bucket'
+    # DeletionPolicy: Retain // Add to not delete the bucket when deleting the stack
+    Properties:
+      BucketName: !Sub 'dabucket-gbaas-prod-${AWS::Region}-1'
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Status: Enabled
+            NoncurrentVersionExpiration:
+              - NoncurrentDays: 21
+                NewerNoncurrentVersions: 2
+  # Role to replicate to DeepArchiveBucket
+  DeepArchiveReplicationRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service:
+                - s3.amazonaws.com
+  DeepArchiveReplicationPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - 's3:GetReplicationConfiguration'
+              - 's3:ListBucket'
+              - 's3:GetObjectVersion'
+              - 's3:GetObjectVersionAcl'
+              - 's3:ReplicateObject'
+              - 's3:ReplicateDelete'
+            Effect: Allow
+            Resource: !Sub 'arn:aws:s3:::${DeepArchiveBucket}/*'
+            
+      PolicyName: DeepArchiveReplicationPolicy
+      Roles:
+        - !Ref DeepArchiveReplicationRole
+
+
+  # EventBridge rule to schedule the backup job
+  EventRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Description: !Sub "Triggers backup job for ${BackupFunction}"
+      ScheduleExpression: 'rate(1 day)'
+      State: "ENABLED"
+      Targets:
+        - Arn: !GetAtt
+            - BackupFunction
+            - Arn
+          Id: !Ref BackupFunction
+          RoleArn: !GetAtt
+            - BackupFunctionRole
+            - Arn
+  EventRulePermission: 
+  Type: AWS::Lambda::Permission
+  Properties: 
+    FunctionName: !Ref BackupFunction
+    Action: "lambda:InvokeFunction"
+    Principal: "events.amazonaws.com"
+    SourceArn: !GetAtt
+      - EventRule
+      - Arn
+  # Core Backup Function (Code is added through the aws cli in CI/CD)
+  BackupFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: !Sub 'backupfn-gbaas-prod-${AWS::Region}-1'
+      Runtime: 'go1.x'
+      Role: !GetAtt
+        - BackupFunctionRole
+        - Arn
+      Handler: 'main'
+      Code:
+        S3Bucket: !Ref CoreBucket
+        S3Key: "backupfn.zip"
+  # Role to allow access to CoreBucket
+  BackupFunctionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [lambda.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Policies:
+        - PolicyName: 'LambdaAccessToRegularS3Bucket'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['s3:GetObject', 's3:PutObject']
+                Resource: !Sub 'arn:aws:s3:::${RegularS3Bucket}/*'
+
+Outputs:
+  # Those values can be parsed by CI/CD pipe to upload the webapp / lambda code
+  CoreBucketArn:
+    Value: !GetAtt CoreBucket.Arn
+  BackupFunctionArn:
+    Value: !GetAtt BackupFunction.Arn

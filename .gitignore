@@ -1,0 +1,10 @@
+# Ignore Emacs stuff
+*~
+\#*\#
+.\#*
+
+# Ignore Terraform Stuff
+*.tfstate
+*.tfstate.backup
+*.lock.hcl
+**/.terraform/**
