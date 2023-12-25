@@ -28,21 +28,8 @@ jobs:
             exit 1
           fi
 
-      - name: Install dependencies
-        run: |
-            apt update -y
-            apt install go -y
-
-      - name: Compile and upload function
-        run: |
-          GOOS=linux go build -o main function/main.go
-          zip backupfn.zip main
-          aws s3 cp backupfn.zip s3://$COREBUCKET_NAME/backupfn.zip
-
       - name: Execute CloudFormation Stack
         run: |
-            OUTPUT_FILE="./tmp/output.txt"
-
             aws cloudformation update-stack --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE | tee $OUTPUT_FILE --capabilities CAPABILITY_IAM
             aws cloudformation wait stack-update-complete --stack-name $STACK_NAME
 
@@ -52,9 +39,25 @@ jobs:
             echo "S3_NAME=${OUTPUT_S3}" >> $GITHUB_ENV
             echo "LAMBDA_NAME=${OUTPUT_LAMBDA}" >> $GITHUB_ENV
 
-      - name: Upload Webapp
+      - name: Install dependencies
+        run: |
+            apt update -y
+            apt install go -y
 
+      - name: Compile and upload function
+        run: |
+          cd function
+          CGO_ENABLED=0 GOOS=linux go build -o ../main main.go
+          cd ..
+          zip backupfn.zip main
+          aws s3 cp backupfn.zip s3://{{ env.S3_NAME }}/backupfn.zip
+
+      - name: Upload Webapp
+        run: |
+          aws s3 cp web s3://{{ env.S3_NAME }}/web --recursive
+          
       - name: Upload Backup Service
         run: |
-          {{ env.S3_NAME }}
-          aws lambda update-function-code --function-name myLambdaFunction --zip-file fileb://./myLambdaCode.zip
+          aws lambda update-function-code --function-name {{ env.LAMBDA_NAME }} \
+          --s3-bucket s3://{{ env.S3_NAME }} \
+          --s3-key backupfn.zip

@@ -1,6 +1,27 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: GBaaS Infrastructure
 
+# This is just a workaround
+Parameters:
+  BackupFunctionBucket:
+    Description: Name of the bucket where the backup function is found
+    Type: String
+    Default: "DEFAULT_BUCKET"
+  BackupFunctionBucketKey:
+    Description: Name of the zipped function inside the bucket
+    Type: String
+    Default: "backupfn.zip"
+  UseDefBucket:
+    Description: Set this to false if you want to use a custom BackupFunctionBucket
+    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "true"
+
+Conditions:
+  UseDefaultBackupFunctionBucket: !Equals [ !Ref UseDefBucket, "true" ]
+
 Resources:
   # Core bucket, containing current backups and the internal data (like the frontend code)
   CoreBucket:
@@ -76,33 +97,6 @@ Resources:
       Roles:
         - !Ref DeepArchiveReplicationRole
 
-
-  # EventBridge rule to schedule the backup job
-  EventRule:
-    Type: 'AWS::Events::Rule'
-    Properties:
-      Description: !Sub "Triggers backup job for ${BackupFunction}"
-      ScheduleExpression: 'rate(1 day)'
-      State: "ENABLED"
-      Targets:
-        - Arn: !GetAtt
-            - BackupFunction
-            - Arn
-          Id: !Ref BackupFunction
-          RoleArn: !GetAtt
-            - BackupFunctionRole
-            - Arn
-  EventRulePermission: 
-    Type: AWS::Lambda::Permission
-    Properties: 
-      FunctionName: !GetAtt
-        - BackupFunction
-        - Arn
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt
-        - EventRule
-        - Arn
   # Core Backup Function (Code is added through the aws cli in CI/CD)
   BackupFunction:
     Type: 'AWS::Lambda::Function'
@@ -118,8 +112,8 @@ Resources:
           BUCKET_NAME: !Ref CoreBucket
           BUCKET_REGION: !Sub ${AWS::Region}
       Code:
-        S3Bucket: !Ref CoreBucket
-        S3Key: "backupfn.zip"
+        S3Bucket: !If [UseDefaultBackupFunctionBucket, !Ref CoreBucket, !Ref BackupFunctionBucket]
+        S3Key: !Ref BackupFunctionBucketKey
   # Role to allow access to CoreBucket
   BackupFunctionRole:
     Type: 'AWS::IAM::Role'
@@ -139,6 +133,30 @@ Resources:
               - Effect: Allow
                 Action: ['s3:GetObject', 's3:PutObject']
                 Resource: !Sub 'arn:aws:s3:::${CoreBucket}/*'
+   # EventBridge rule to schedule the backup job
+  EventRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Description: !Sub "Triggers backup job for ${BackupFunction}"
+      ScheduleExpression: 'rate(1 day)'
+      State: "ENABLED"
+      Targets:
+        - Arn: !GetAtt
+            - BackupFunction
+            - Arn
+          Id: !Ref BackupFunction
+            
+  EventRulePermission: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: !GetAtt
+        - BackupFunction
+        - Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt
+        - EventRule
+        - Arn
 
 Outputs:
   # Those values can be parsed by CI/CD pipe to upload the webapp / lambda code

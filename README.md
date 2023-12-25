@@ -8,9 +8,41 @@ This is a AWS integrated application to backup Github repositorys.
 
 The infrastructure is deployed using AWS CloudFormation. For initial deployment you can use the AWS Cli:
 
+**Important**: Because CloudFormation suffers a painful chicken-egg problem with Lambda code, you must first create a dummy bucket, this bucket can be deleted when the first CloudFormation Stack is running.
+
 ```bash
-aws cloudformation create-stack --stack-name stack-gbaas-prod-eu-central-1-1 --template-body file://./deploy.yaml --capabilities CAPABILITY_IAM
+# Compile function
+cd function
+CGO_ENABLED=0 GOOS=linux go build -o ../main main.go
+cd ..
+zip backupfn.zip main
+
+# Create bucket and upload function
+aws s3 mb s3://initbucket-gbaas-prod-eu-central-1-1
+aws s3 cp backupfn.zip s3://initbucket-gbaas-prod-eu-central-1-1
+
+# Create cloudformation stack with the init bucket
+aws cloudformation create-stack --stack-name stack-gbaas-prod-eu-central-1-1 \
+--template-body file://./deploy.yaml --capabilities CAPABILITY_IAM \
+--parameters ParameterKey=UseDefBucket,ParameterValue=false \
+ParameterKey=BackupFunctionBucket,ParameterValue=initbucket-gbaas-prod-eu-central-1-1
+
+# Wait for the stack to be initialized
+aws cloudformation wait stack-create-complete --stack-name stack-gbaas-prod-eu-central-1-1 
+
+# Now upload the function to the real bucket
+aws s3 cp backupfn.zip s3://corebucket-gbaas-prod-eu-central-1-1
+# Update the lambda function
+aws lambda update-function-code --function-name backupfn-gbaas-prod-eu-central-1-1 \
+--s3-bucket s3://corebucket-gbaas-prod-eu-central-1-1 \
+--s3-key backupfn.zip
+
+# If this is done you can now delete the dummy bucket
+aws s3 rm s3://initbucket-gbaas-prod-eu-central-1-1 --recursive
+aws s3 rb s3://initbucket-gbaas-prod-eu-central-1-1
 ```
+
+Once set up with that, the Action workflow can handle everything (as long as this backupfn.zip exists in the corebucket).
 
 *Note* building of the CloudFormation Stack requires a AWS user with the following policies attached:
 - AWSCloudFormationFullAccess

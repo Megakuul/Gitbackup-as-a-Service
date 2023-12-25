@@ -3,8 +3,5 @@
 \#*\#
 .\#*
 
-# Ignore Terraform Stuff
-*.tfstate
-*.tfstate.backup
-*.lock.hcl
-**/.terraform/**
+main
+backupfn.zip
