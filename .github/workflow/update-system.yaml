@@ -43,15 +43,18 @@ jobs:
         run: |
             OUTPUT_FILE="./tmp/output.txt"
 
-            aws cloudformation update-stack --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE | tee $OUTPUT_FILE
-            OUTPUT=$(tail -n 2 $OUTPUT_FILE)
+            aws cloudformation update-stack --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE | tee $OUTPUT_FILE --capabilities CAPABILITY_IAM
+            aws cloudformation wait stack-update-complete --stack-name $STACK_NAME
 
-            echo "S3_ARN=${echo $OUTPUT | head -n 1}" >> $GITHUB_ENV
-            echo "LAMBDA_ARN=${echo $OUTPUT | tail -n 1}" >> $GITHUB_ENV
+            OUTPUT_S3=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[0].OutputValue")
+            OUTPUT_LAMBDA=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[1].OutputValue")
+            
+            echo "S3_NAME=${OUTPUT_S3}" >> $GITHUB_ENV
+            echo "LAMBDA_NAME=${OUTPUT_LAMBDA}" >> $GITHUB_ENV
 
       - name: Upload Webapp
 
       - name: Upload Backup Service
         run: |
-          {{ env.OUTPUT }}
+          {{ env.S3_NAME }}
           aws lambda update-function-code --function-name myLambdaFunction --zip-file fileb://./myLambdaCode.zip

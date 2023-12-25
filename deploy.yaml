@@ -14,7 +14,7 @@ Resources:
         Rules:
           - Status: Enabled
             NoncurrentVersionExpiration:
-              - NoncurrentDays: 3
+              NoncurrentDays: 3
       ReplicationConfiguration:
         Role: !GetAtt
           - DeepArchiveReplicationRole
@@ -26,7 +26,10 @@ Resources:
             Filter:
               # This is the path where the repositorys are stored
               Prefix: "repos/"
+            Priority: 1
             Status: Enabled
+            DeleteMarkerReplication:
+              Status: Disabled
             
   # Deep Archive bucket, where backups are replicated to
   DeepArchiveBucket:
@@ -40,8 +43,8 @@ Resources:
         Rules:
           - Status: Enabled
             NoncurrentVersionExpiration:
-              - NoncurrentDays: 21
-                NewerNoncurrentVersions: 2
+              NoncurrentDays: 21
+              NewerNoncurrentVersions: 2
   # Role to replicate to DeepArchiveBucket
   DeepArchiveReplicationRole:
     Type: 'AWS::IAM::Role'
@@ -90,14 +93,16 @@ Resources:
             - BackupFunctionRole
             - Arn
   EventRulePermission: 
-  Type: AWS::Lambda::Permission
-  Properties: 
-    FunctionName: !Ref BackupFunction
-    Action: "lambda:InvokeFunction"
-    Principal: "events.amazonaws.com"
-    SourceArn: !GetAtt
-      - EventRule
-      - Arn
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: !GetAtt
+        - BackupFunction
+        - Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt
+        - EventRule
+        - Arn
   # Core Backup Function (Code is added through the aws cli in CI/CD)
   BackupFunction:
     Type: 'AWS::Lambda::Function'
@@ -108,6 +113,10 @@ Resources:
         - BackupFunctionRole
         - Arn
       Handler: 'main'
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref CoreBucket
+          BUCKET_REGION: !Sub ${AWS::Region}
       Code:
         S3Bucket: !Ref CoreBucket
         S3Key: "backupfn.zip"
@@ -129,11 +138,11 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: ['s3:GetObject', 's3:PutObject']
-                Resource: !Sub 'arn:aws:s3:::${RegularS3Bucket}/*'
+                Resource: !Sub 'arn:aws:s3:::${CoreBucket}/*'
 
 Outputs:
   # Those values can be parsed by CI/CD pipe to upload the webapp / lambda code
-  CoreBucketArn:
-    Value: !GetAtt CoreBucket.Arn
+  CoreBucketName:
+    Value: !Ref CoreBucket
   BackupFunctionArn:
-    Value: !GetAtt BackupFunction.Arn
+    Value: !Ref BackupFunction
