@@ -4,7 +4,7 @@ Description: GBaaS Infrastructure
 # This is just a workaround
 Parameters:
   BackupEntities:
-    Description: Semicolon seperated list of entities to backup (schema goes: ENTITYNAME:ORGA||USER)
+    Description: Semicolon seperated list of entities to backup
     Type: String
     Default: ""
   BackupFunctionBucket:
