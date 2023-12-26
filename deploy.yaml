@@ -125,6 +125,7 @@ Resources:
     Type: 'AWS::Lambda::Function'
     Properties:
       FunctionName: !Sub 'backupfn-gbaas-prod-${AWS::Region}-1'
+      Timeout: 900 # 15 Minutes
       Runtime: 'go1.x'
       Role: !GetAtt
         - BackupFunctionRole
@@ -155,7 +156,7 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action: 's3:GetObject'
+                Action: ['s3:GetObject', 's3:PutObject']
                 Resource: !Sub 'arn:aws:s3:::${CoreBucket}/*'
    # EventBridge rule to schedule the backup job
   EventRule:

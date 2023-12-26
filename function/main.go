@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -15,6 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+
+	"github.com/go-git/go-git/v5"
 )
 
 const BUCKET_NAME_ENV string = "GBAAS_COREBUCKET_NAME"
@@ -29,6 +33,8 @@ const ENTITY_TYPE_ORGA string = "ORGA"
 const BUCKET_REPO_PREFIX string = "repos"
 const BUCKET_WEBDATA_KEY string = "web/repos.json"
 const GITHUB_API_URL string = "https://api.github.com"
+
+const LAMBDA_TMP_DIR string = "/tmp"
 
 // Limit maximum repositorys so that issues cannot cause a unpayable AWS bill
 const GITHUB_MAX_REQUESTS = 5000
@@ -85,8 +91,6 @@ func ListRepositories(name string, orga bool) ([]repository, error) {
 		if err!=nil {
 			return nil, err
 		}
-		fmt.Println(res.StatusCode)
-		fmt.Println(reqUrl)
 		// Stop fetching (happens when e.g. a repo does not exist anymore)
 		if res.StatusCode!=http.StatusOK {
 			break
@@ -97,8 +101,6 @@ func ListRepositories(name string, orga bool) ([]repository, error) {
 			return nil, err
 		}
 		
-		fmt.Println(len(tmpRepoList))
-		fmt.Println(tmpRepoList)
 		// Page is empty stop fetching of pages
 		if len(tmpRepoList)==0 {
 			break
@@ -106,9 +108,6 @@ func ListRepositories(name string, orga bool) ([]repository, error) {
 		repos = append(repos, tmpRepoList...)
 		idx++
 	}
-
-	fmt.Println(len(repos))
-	fmt.Println(repos)
 
 	return repos, nil
 }
@@ -138,12 +137,54 @@ func UpdateWebData(bucketname string, sess *s3.S3, repos []repository) error {
  * @param url Repository url
  */
 func FetchRepository(url string) ([]byte, error) {
-	res, err := http.Get(url)
+	bareRepoPath := fmt.Sprintf("%s/repobuf", LAMBDA_TMP_DIR)
+	_, err := git.PlainClone(bareRepoPath, true, &git.CloneOptions{
+		URL: url,
+	})
 	if err!=nil {
 		return nil, err
 	}
-	defer res.Body.Close()
-	return io.ReadAll(res.Body)
+
+	bareRepoBuf := new(bytes.Buffer)
+
+	zw := zip.NewWriter(bareRepoBuf)
+	defer zw.Close()
+
+	err = filepath.Walk(bareRepoPath, func(file string, fi os.FileInfo, err error) error {
+		if err!=nil {
+			return err
+		}
+		if fi.IsDir() {
+			return nil
+		}
+
+		header, err := zip.FileInfoHeader(fi)
+		if err!=nil {
+			return err
+		}
+		header.Name = file
+		header.Method = zip.Deflate
+
+		writer, err := zw.CreateHeader(header)
+		if err!=nil {
+			return err
+		}
+
+		curFile, err := os.Open(file)
+		if err!=nil {
+			return err
+		}
+		defer curFile.Close()
+		_, err = io.Copy(writer, curFile)
+		return err
+	})
+	if err!=nil {
+		return nil, err
+	}
+
+	os.RemoveAll(bareRepoPath)
+
+	return bareRepoBuf.Bytes(), nil
 }
 
 /**
@@ -156,7 +197,7 @@ func FetchRepository(url string) ([]byte, error) {
 func PushRepository(name string, bucketname string, sess *s3.S3, data []byte) error {
 	_, err := sess.PutObject(&s3.PutObjectInput{
 		Bucket: aws.String(bucketname),
-		Key: aws.String(fmt.Sprintf("%s/%s.git", BUCKET_REPO_PREFIX, name)),
+		Key: aws.String(fmt.Sprintf("%s/%s.git.zip", BUCKET_REPO_PREFIX, name)),
 		Body: bytes.NewReader(data),
 	})
 	if err!=nil {
