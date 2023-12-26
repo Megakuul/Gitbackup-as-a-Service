@@ -1,13 +1,29 @@
 <h1>GBAAS DEFAULT PAGE</h1>
 
+<div id="repoList"></div> <!-- Parent element to hold the list of repositories -->
 
 <script>
-	fetch("repos.json")
-		.then(response => response.json())
-		.then(data => {
-				console.log(data)
-		})
-		.catch(error => {
-				console.error("Error fetching json file: ", error);
-		});
+    fetch("repos.json")
+        .then(response => response.json())
+        .then(data => {
+            const repoListElement = document.getElementById('repoList');
+
+            data.forEach(repo => {
+                const repoElement = document.createElement('div');
+                repoElement.className = 'repository';
+                repoElement.innerHTML = `
+                    <h2>${repo.full_name}</h2>
+                    <p>${repo.description}</p>
+                    <a href="${repo.html_url}" target="_blank">Repository Link</a>
+                    <p>Clone URL: ${repo.clone_url}</p>
+                    <p>Language: ${repo.language}</p>
+                    <p>Fork: ${repo.fork ? 'Yes' : 'No'}</p>
+                `;
+
+                repoListElement.appendChild(repoElement);
+            });
+        })
+        .catch(error => {
+            console.error("Error fetching json file: ", error);
+        });
 </script>
