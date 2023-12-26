@@ -2,9 +2,9 @@
 
 This is a AWS integrated application to backup Github repositorys.
 
+Public repositories of defined users and organizations are copied daily via a Lambda function to an S3 corebucket, where they are directly accessible via a web interface. The repos are removed from the corebucket after 3 versions. In addition, the repositories are replicated to a Glacier Deep Archive bucket, where they are not publicly accessible and are backed up for 21 versions.
 
-
-### Deployment on AWS
+### Initial Deployment
 
 The infrastructure is deployed using AWS CloudFormation. For initial deployment you can use the AWS Cli:
 
@@ -21,10 +21,12 @@ zip backupfn.zip main
 aws s3 mb s3://initbucket-gbaas-prod-eu-central-1-1
 aws s3 cp backupfn.zip s3://initbucket-gbaas-prod-eu-central-1-1
 
-# Create cloudformation stack with the init bucket
+# Create cloudformation stack with the init bucket 
+# (change <youruser> with the github user to backup or view *.env.example* for more information)
 aws cloudformation create-stack --stack-name stack-gbaas-prod-eu-central-1-1 \
 --template-body file://./deploy.yaml --capabilities CAPABILITY_IAM \
---parameters ParameterKey=UseDefBucket,ParameterValue=false \
+--parameters ParameterKey=BackupEntities,ParameterValue=<youruser>:USER \
+ParameterKey=UseDefBucket,ParameterValue=false \
 ParameterKey=BackupFunctionBucket,ParameterValue=initbucket-gbaas-prod-eu-central-1-1
 
 # Wait for the stack to be initialized
@@ -62,8 +64,10 @@ To update the system you can either use the following commands:
 
 ```bash
 # Update CloudFormation stack
+# (change <youruser> with the github user to backup or view *.env.example* for more information)
 aws cloudformation update-stack --stack-name stack-gbaas-prod-eu-central-1-1 \
---template-body file://./deploy.yaml --capabilities CAPABILITY_IAM
+--template-body file://./deploy.yaml --capabilities CAPABILITY_IAM \
+--parameters ParameterKey=BackupEntities,ParameterValue=<youruser>:USER \
 
 # Output corebucket_name
 aws cloudformation describe-stacks --stack-name stack-gbaas-prod-eu-central-1-1 \
@@ -96,6 +100,7 @@ Repository Secrets:
 
 Repository Variables:
 - *AWS_DEFAULT_REGION*: eu-central-1
+- *BACKUP_ENTITIES*: somegithubuser:USER;somegithuborga:ORGA
 
 
 The Workflow will do the following steps:
@@ -104,3 +109,8 @@ The Workflow will do the following steps:
 - Compiles and uploads the Backup Function to the Core Bucket
 - Updates the Lambda function with the new code
 - Uploads the Webapp to the Core Bucket
+
+
+### Advanced Setup
+
+At this point, the application is running and can be accessed via the S3 URL. For a more user-friendly experience, I also recommend placing a CloudFront instance with its own SSL certificate in front of the bucket (instance must be pointing to "/web/index.html").

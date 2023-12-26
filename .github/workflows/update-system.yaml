@@ -30,7 +30,11 @@ jobs:
 
       - name: Execute CloudFormation Stack
         run: |
-            aws cloudformation update-stack --stack-name $STACK_NAME --template-body file://$TEMPLATE_FILE --capabilities CAPABILITY_IAM | tee $OUTPUT_FILE
+            aws cloudformation update-stack --stack-name $STACK_NAME \
+            --template-body file://$TEMPLATE_FILE \
+            --capabilities CAPABILITY_IAM \
+            --parameters ParameterKey=BackupEntities,ParameterValue={{ vars.BACKUP_ENTITIES }} | tee $OUTPUT_FILE
+            
             aws cloudformation wait stack-update-complete --stack-name $STACK_NAME
 
             OUTPUT_S3=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[0].OutputValue")
@@ -41,8 +45,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-            apt update -y
-            apt install go -y
+            sudo apt update -y
+            sudo apt install go -y
 
       - name: Compile and upload function
         run: |
@@ -51,13 +55,13 @@ jobs:
           cd ..
           zip backupfn.zip main
           aws s3 cp backupfn.zip s3://{{ env.S3_NAME }}/backupfn.zip
-
-      - name: Upload Webapp
-        run: |
-          aws s3 cp web s3://{{ env.S3_NAME }}/web --recursive
           
       - name: Upload Backup Service
         run: |
           aws lambda update-function-code --function-name {{ env.LAMBDA_NAME }} \
           --s3-bucket s3://{{ env.S3_NAME }} \
           --s3-key backupfn.zip
+
+      - name: Upload Webapp
+        run: |
+          aws s3 cp web s3://{{ env.S3_NAME }}/web --recursive

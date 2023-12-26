@@ -3,6 +3,10 @@ Description: GBaaS Infrastructure
 
 # This is just a workaround
 Parameters:
+  BackupEntities:
+    Description: Semicolon seperated list of entities to backup (schema goes: ENTITYNAME:ORGA||USER)
+    Type: String
+    Default: ""
   BackupFunctionBucket:
     Description: Name of the bucket where the backup function is found
     Type: String
@@ -126,8 +130,9 @@ Resources:
       Handler: 'main'
       Environment:
         Variables:
-          BUCKET_NAME: !Ref CoreBucket
-          BUCKET_REGION: !Sub ${AWS::Region}
+          GBAAS_COREBUCKET_NAME: !Ref CoreBucket
+          GBAAS_COREBUCKET_REGION: !Sub ${AWS::Region}
+          GBAAS_ENTITIES: !Ref BackupEntities
       Code:
         S3Bucket: !If [UseDefaultBackupFunctionBucket, !Ref CoreBucket, !Ref BackupFunctionBucket]
         S3Key: !Ref BackupFunctionBucketKey
