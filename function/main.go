@@ -27,7 +27,7 @@ const ENTITY_TYPE_USER string = "USER"
 const ENTITY_TYPE_ORGA string = "ORGA"
 
 const BUCKET_REPO_PREFIX string = "repos"
-const BUCKET_WEBDATA_KEY string = "repos.json"
+const BUCKET_WEBDATA_KEY string = "web/repos.json"
 const GITHUB_API_URL string = "https://api.github.com"
 
 // Limit maximum repositorys so that issues cannot cause a unpayable AWS bill

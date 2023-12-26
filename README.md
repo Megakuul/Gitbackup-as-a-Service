@@ -73,7 +73,7 @@ aws cloudformation describe-stacks --stack-name stack-gbaas-prod-eu-central-1-1 
 --query "Stacks[0].Outputs[1].OutputValue"
 
 # Compile function
-GOOS=linux go build -o main function/main.go
+CGO_ENABLED=0 GOOS=linux go build -o main function/main.go
 zip backupfn.zip main
 
 # Upload function and webapp (corebucket_name is the first output of cloudformation)

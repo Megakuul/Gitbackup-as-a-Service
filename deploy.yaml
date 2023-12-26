@@ -29,6 +29,11 @@ Resources:
     # DeletionPolicy: Retain // Add to not delete the bucket when deleting the stack
     Properties:
       BucketName: !Sub 'corebucket-gbaas-prod-${AWS::Region}-1'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
       VersioningConfiguration:
         Status: Enabled
       LifecycleConfiguration:
@@ -51,6 +56,18 @@ Resources:
             Status: Enabled
             DeleteMarkerReplication:
               Status: Disabled
+  CoreBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref CoreBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 's3:GetObject'
+            Effect: Allow
+            Resource: !Sub 'arn:aws:s3:::${CoreBucket}/repos'
+            Principal: '*'
             
   # Deep Archive bucket, where backups are replicated to
   DeepArchiveBucket:
@@ -131,8 +148,10 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action: ['s3:GetObject', 's3:PutObject']
-                Resource: !Sub 'arn:aws:s3:::${CoreBucket}/*'
+                Action: 's3:GetObject'
+                Resource:
+                  - !Sub 'arn:aws:s3:::${CoreBucket}/web/*'
+                  - !Sub 'arn:aws:s3:::${CoreBucket}/repos/*'
    # EventBridge rule to schedule the backup job
   EventRule:
     Type: 'AWS::Events::Rule'

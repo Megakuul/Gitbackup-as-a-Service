@@ -11,9 +11,9 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET }}
-      AWS_DEFAULT_REGION: ${{ var.AWS_REGION }}
-      STACK_NAME: "stack-gbaas-prod-${{ var.AWS_REGION }}-1"
-      COREBUCKET_NAME: "corebucket-gbaas-prod-${{ var.AWS_REGION }}-1"
+      AWS_DEFAULT_REGION: ${{ vars.AWS_REGION }}
+      STACK_NAME: "stack-gbaas-prod-${{ vars.AWS_REGION }}-1"
+      COREBUCKET_NAME: "corebucket-gbaas-prod-${{ vars.AWS_REGION }}-1"
       TEMPLATE_FILE: "./deploy.yaml"
     steps:
       - name: Checkout repository
