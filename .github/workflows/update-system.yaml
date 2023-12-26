@@ -58,7 +58,7 @@ jobs:
       - name: Upload Backup Service
         run: |
           aws lambda update-function-code --function-name ${{ env.LAMBDA_NAME }} \
-          --s3-bucket s3://${{ env.S3_NAME }} \
+          --s3-bucket ${{ env.S3_NAME }} \
           --s3-key backupfn.zip
 
       - name: Upload Webapp

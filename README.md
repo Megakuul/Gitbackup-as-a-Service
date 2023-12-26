@@ -36,7 +36,7 @@ aws cloudformation wait stack-create-complete --stack-name stack-gbaas-prod-eu-c
 aws s3 cp backupfn.zip s3://corebucket-gbaas-prod-eu-central-1-1
 # Update the lambda function
 aws lambda update-function-code --function-name backupfn-gbaas-prod-eu-central-1-1 \
---s3-bucket s3://corebucket-gbaas-prod-eu-central-1-1 \
+--s3-bucket corebucket-gbaas-prod-eu-central-1-1 \
 --s3-key backupfn.zip
 
 # If this is done you can now delete the dummy bucket
