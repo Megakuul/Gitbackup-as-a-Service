@@ -45,8 +45,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-            sudo apt update -y
-            sudo apt install go -y
+          sudo snap install go --classic
 
       - name: Compile and upload function
         run: |
