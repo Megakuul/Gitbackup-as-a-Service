@@ -70,7 +70,9 @@ Resources:
           - Action:
               - 's3:GetObject'
             Effect: Allow
-            Resource: !Sub 'arn:aws:s3:::${CoreBucket}/repos'
+            Resource:
+              - !Sub 'arn:aws:s3:::${CoreBucket}/web/*'
+              - !Sub 'arn:aws:s3:::${CoreBucket}/repos/*'
             Principal: '*'
             
   # Deep Archive bucket, where backups are replicated to
@@ -154,9 +156,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: 's3:GetObject'
-                Resource:
-                  - !Sub 'arn:aws:s3:::${CoreBucket}/web/*'
-                  - !Sub 'arn:aws:s3:::${CoreBucket}/repos/*'
+                Resource: !Sub 'arn:aws:s3:::${CoreBucket}/*'
    # EventBridge rule to schedule the backup job
   EventRule:
     Type: 'AWS::Events::Rule'
