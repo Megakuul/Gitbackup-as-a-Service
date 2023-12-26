@@ -33,7 +33,7 @@ jobs:
             aws cloudformation update-stack --stack-name $STACK_NAME \
             --template-body file://$TEMPLATE_FILE \
             --capabilities CAPABILITY_IAM \
-            --parameters ParameterKey=BackupEntities,ParameterValue={{ vars.BACKUP_ENTITIES }} | tee $OUTPUT_FILE
+            --parameters ParameterKey=BackupEntities,ParameterValue=${{ vars.BACKUP_ENTITIES }} | tee $OUTPUT_FILE
             
             aws cloudformation wait stack-update-complete --stack-name $STACK_NAME
 
@@ -53,14 +53,14 @@ jobs:
           CGO_ENABLED=0 GOOS=linux go build -o ../main main.go
           cd ..
           zip backupfn.zip main
-          aws s3 cp backupfn.zip s3://{{ env.S3_NAME }}/backupfn.zip
+          aws s3 cp backupfn.zip s3://${{ env.S3_NAME }}/backupfn.zip
           
       - name: Upload Backup Service
         run: |
-          aws lambda update-function-code --function-name {{ env.LAMBDA_NAME }} \
-          --s3-bucket s3://{{ env.S3_NAME }} \
+          aws lambda update-function-code --function-name ${{ env.LAMBDA_NAME }} \
+          --s3-bucket s3://${{ env.S3_NAME }} \
           --s3-key backupfn.zip
 
       - name: Upload Webapp
         run: |
-          aws s3 cp web s3://{{ env.S3_NAME }}/web --recursive
+          aws s3 cp web s3://${{ env.S3_NAME }}/web --recursive
