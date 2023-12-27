@@ -21,6 +21,8 @@ import (
 	"github.com/go-git/go-git/v5"
 )
 
+const GIT_ERR_REPO_EMPTY string = "remote repository is empty"
+
 const BUCKET_NAME_ENV string = "GBAAS_COREBUCKET_NAME"
 const BUCKET_REGION_ENV string = "GBAAS_COREBUCKET_REGION"
 const ENTITY_ENV string = "GBAAS_ENTITIES"
@@ -141,6 +143,10 @@ func FetchRepository(url string) ([]byte, error) {
 	_, err := git.PlainClone(bareRepoPath, true, &git.CloneOptions{
 		URL: url,
 	})
+	if err.Error()==GIT_ERR_REPO_EMPTY {
+		// Skip repository
+		return nil, nil
+	}
 	if err!=nil {
 		return nil, err
 	}
@@ -267,10 +273,15 @@ func StartJob(ctx context.Context) (string, error) {
 
 	// Repos are backed up one by one, if performance matters, this can be done async aswell.
 	// Just be aware that this will lead to more memory usage -> more network bandwidth -> higher AWS bill -> AA (Anonymous AWS debtors) therapy sessions
-	for _, repo := range repos {
+	for i, repo := range repos {
 		repoBytes, err := FetchRepository(repo.CloneUrl)
 		if err!=nil {
 			return "Fetching Error", err
+		}
+		if repoBytes==nil {
+			// Skip repository
+			repos[i].Description += " (not backed up - empty repository)"
+			continue
 		}
 		err = PushRepository(repo.FullName, bucketName, bucketSess, repoBytes)
 		if err!=nil {
