@@ -126,6 +126,9 @@ Resources:
     Properties:
       FunctionName: !Sub 'backupfn-gbaas-prod-${AWS::Region}-1'
       Timeout: 900 # 15 Minutes
+      EphemeralStorage:
+        Size: 512
+      MemorySize: 512
       Runtime: 'go1.x'
       Role: !GetAtt
         - BackupFunctionRole

@@ -157,11 +157,16 @@ func FetchRepository(url string) ([]byte, error) {
 			return nil
 		}
 
+		relPath, err := filepath.Rel(".", file)
+		if err!=nil {
+			return err
+		}
+		
 		header, err := zip.FileInfoHeader(fi)
 		if err!=nil {
 			return err
 		}
-		header.Name = file
+		header.Name = relPath
 		header.Method = zip.Deflate
 
 		writer, err := zw.CreateHeader(header)
