@@ -148,7 +148,6 @@ func FetchRepository(url string) ([]byte, error) {
 	bareRepoBuf := new(bytes.Buffer)
 
 	zw := zip.NewWriter(bareRepoBuf)
-	defer zw.Close()
 
 	err = filepath.Walk(bareRepoPath, func(file string, fi os.FileInfo, err error) error {
 		if err!=nil {
@@ -174,13 +173,15 @@ func FetchRepository(url string) ([]byte, error) {
 		if err!=nil {
 			return err
 		}
-		defer curFile.Close()
 		_, err = io.Copy(writer, curFile)
+		curFile.Close()
 		return err
 	})
 	if err!=nil {
 		return nil, err
 	}
+
+	zw.Close()
 
 	os.RemoveAll(bareRepoPath)
 

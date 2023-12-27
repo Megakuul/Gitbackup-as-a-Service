@@ -1,29 +1,190 @@
-<h1>GBAAS DEFAULT PAGE</h1>
+<!DOCTYPE html>
 
-<div id="repoList"></div> <!-- Parent element to hold the list of repositories -->
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Github Backup</title>
+    <meta name="description" content="Discover and explore my archived GitHub repositories. Page is managed by GBaaS">
+    <meta name="keywords" content="Backup, Git, Github, Archive, GBaaS, Gitbackup-as-a-Service">
+  </head>
 
-<script>
+  <body>
+    <h1 class="title">Github Archive Backup</h1>
+    <p class="subtitle">Welcome to the archive of my GitHub repositories.</p>
+    <p class="subtitle">Explore and download all backed-up repositories conveniently packaged in <b>.zip</b> format.</p>
+    <p class="subtitle">This page is maintained and managed by <a href="https://github.com/megakuul/gitbackup-as-a-service">GBaaS</a>.</p>
+  
+    <center style="display: flex; flex-direction: row; justify-content: center; align-items: center; margin-top: 2rem; ">
+      <div class="description">
+        To fetch repositories from this page,<br>
+        download them and execute<br>
+        the following commands in your terminal.
+      </div>
+      <div class="codeblock">
+        <p>$ unzip myrepo.git.zip</p>
+        <p>$ git clone myrepo.git</p>
+      </div>
+    </center>
+    <center><div id="repoList"></div></center>
+  </body>
+
+  <style>
+    body {
+      background-color: hsl(210 50% 12%);
+    }
+    .title {
+      text-align: center;
+      margin: 5rem 0 2rem 0;
+      font-size: 4rem;
+      color: hsl(210 30% 24%);
+      text-shadow: 4px 6px 10px rgba(0,13,20,0.6);
+      transition: all ease 1s;
+      user-select: none;
+    }
+    .title:hover {
+      cursor: pointer;
+      color: hsl(210 27% 26%);
+      text-shadow: 5px 7px 12px rgba(0,13,20,0.7);
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: hsl(210 34% 22%);
+    }
+    .subtitle a {
+      color: hsl(210 34% 26%);
+      transition: color ease 1s;
+    }
+    .subtitle a:hover {
+      color: hsl(210 34% 30%);
+    }
+
+    .codeblock {
+      background-color: rgba(0, 0, 0, 0.3);
+      text-align: start;
+      white-space: nowrap;
+      width: min-content;
+
+      border-radius: 12px;
+      margin-left: 1rem;
+      padding: 0.8rem 2.2rem 0.8rem 1.7rem;
+      color: rgba(255,255,255,0.3);
+    }
+    .description {
+      color: rgba(255,255,255,0.3);
+      text-align: start;
+      margin-right: 1rem;
+      white-space: nowrap;
+      width: min-content;
+      transition: all ease 1s;
+    }
+    .description:hover {
+      color: rgba(255,255,255,0.5);
+    }
+
+    #repoList {
+      margin-top: 3rem;
+      width: 90%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .repo {
+      background-color: rgba(245, 245, 245, 0.05);
+      border-radius: 16px;
+      width: 100%;
+      padding: 2rem;
+      margin: 2rem 0 2rem 0;
+      transition: all ease 1s;
+      color: rgba(255,255,255,0.2);
+    }
+    .repo h2 {
+      color: rgba(255,255,255,0.3);
+    }
+    .repo .repo-body {
+      background-color: rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      margin-top: 1rem;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-around;
+    }
+    .repo .repo-body .repo-links {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-around;
+    }
+    .repo .repo-body .repo-links a {
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: rgba(255,255,255,0.2);
+    }
+    .repo .repo-body .repo-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-around;
+    }
+    .repo .repo-body .repo-info p {
+      font-size: 1.5rem;
+      font-weight: 800;
+    }
+    .repo .repo-body .repo-info img {
+      rotate: 45deg;
+    }
+
+    .error {
+      background-color: rgba(245, 9, 1, 0.5);
+      border-radius: 20px;
+      width: 90%;
+      text-align: center;
+      transition: all ease 1s;
+    }
+  </style>
+  
+  <script>
+    const repoListElement = document.getElementById('repoList');
     fetch("repos.json")
-        .then(response => response.json())
-        .then(data => {
-            const repoListElement = document.getElementById('repoList');
+      .then(response => response.json())
+      .then(data => {
+          data.forEach(repo => {
+              const repoElement = document.createElement('div');
+              repoElement.className = 'repo';
+              repoElement.innerHTML = `
+                <h2>${repo.full_name}</h2>
+                <p>${repo.description}</p>
+                <div class="repo-body">
+                  <div class="repo-links">
+                    <a href="${repo.html_url}">Original Repository</a>
+                    <a href="/${repo.full_name}.git.zip">Archive Repository</a>
+                  </div>
+                  <div class="repo-info">
+                    <p>${repo.language}</p>
+                    <img src="${repo.fork ? 'fork.png' : 'nofork.png'}" alt="${repo.fork ? 'Fork' : 'No Fork'}" height="50" >
+                  </div>
+                </div>  
+              `;
+              
+              repoListElement.appendChild(repoElement);
+          });
+      })
+      .catch(error => {
+          const errorElement = document.createElement('div');
+          errorElement.className = 'error'
+          errorElement.innerHTML = `
+            <h2>Error Occured</h2>
+            <p>Repository information at <b>/web/repo.json</b> is not accessible</p>
+          `;
+          
+          repoListElement.appendChild(errorElement);
+          console.error("Error fetching json file: ", error);
+      });
+  </script>
+</html>
 
-            data.forEach(repo => {
-                const repoElement = document.createElement('div');
-                repoElement.className = 'repository';
-                repoElement.innerHTML = `
-                    <h2>${repo.full_name}</h2>
-                    <p>${repo.description}</p>
-                    <a href="${repo.html_url}" target="_blank">Repository Link</a>
-                    <p>Clone URL: ${repo.clone_url}</p>
-                    <p>Language: ${repo.language}</p>
-                    <p>Fork: ${repo.fork ? 'Yes' : 'No'}</p>
-                `;
 
-                repoListElement.appendChild(repoElement);
-            });
-        })
-        .catch(error => {
-            console.error("Error fetching json file: ", error);
-        });
-</script>
