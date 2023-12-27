@@ -143,10 +143,6 @@ func FetchRepository(url string) ([]byte, error) {
 	_, err := git.PlainClone(bareRepoPath, true, &git.CloneOptions{
 		URL: url,
 	})
-	if err.Error()==GIT_ERR_REPO_EMPTY {
-		// Skip repository
-		return nil, nil
-	}
 	if err!=nil {
 		return nil, err
 	}
@@ -276,12 +272,13 @@ func StartJob(ctx context.Context) (string, error) {
 	for i, repo := range repos {
 		repoBytes, err := FetchRepository(repo.CloneUrl)
 		if err!=nil {
-			return "Fetching Error", err
-		}
-		if repoBytes==nil {
-			// Skip repository
-			repos[i].Description += " (not backed up - empty repository)"
-			continue
+			switch (err.Error()) {
+			case GIT_ERR_REPO_EMPTY:
+				repos[i].Description += " (not backed up - empty repository)"
+				continue
+			default:
+				return "Fetching Error", err
+			}
 		}
 		err = PushRepository(repo.FullName, bucketName, bucketSess, repoBytes)
 		if err!=nil {
