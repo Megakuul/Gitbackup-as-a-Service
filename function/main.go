@@ -157,7 +157,7 @@ func FetchRepository(url string) ([]byte, error) {
 			return nil
 		}
 
-		relPath, err := filepath.Rel(".", file)
+		relPath, err := filepath.Rel(bareRepoPath, file)
 		if err!=nil {
 			return err
 		}
