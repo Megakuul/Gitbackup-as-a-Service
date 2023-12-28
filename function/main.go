@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"archive/zip"
 	"bytes"
 	"context"
@@ -20,8 +21,6 @@ import (
 
 	"github.com/go-git/go-git/v5"
 )
-
-const GIT_ERR_REPO_EMPTY string = "remote repository is empty"
 
 const BUCKET_NAME_ENV string = "GBAAS_COREBUCKET_NAME"
 const BUCKET_REGION_ENV string = "GBAAS_COREBUCKET_REGION"
@@ -51,6 +50,9 @@ type repository struct {
 	CloneUrl string `json:"clone_url"`
 	Language string `json:"language"`
 	Fork bool `json:"fork"`
+	BackupState bool `json:"backupstate"`
+	BackupMessage string `json:"backupmessage"`
+	BackupDate string `json:"backupdate"`
 }
 
 type entity struct {
@@ -267,22 +269,34 @@ func StartJob(ctx context.Context) (string, error) {
 	}
 	bucketSess:= s3.New(sess)
 
+	utcTime := time.Now().UTC()
+	date := utcTime.Format("02.01.2006")
+
 	// Repos are backed up one by one, if performance matters, this can be done async aswell.
 	// Just be aware that this will lead to more memory usage -> more network bandwidth -> higher AWS bill -> AA (Anonymous AWS debtors) therapy sessions
-	for i, repo := range repos {
+	for _, repo := range repos {
+		repo.BackupState = true
+		repo.BackupMessage = "Backup successful"
+		repo.BackupDate = date
+		
 		repoBytes, err := FetchRepository(repo.CloneUrl)
 		if err!=nil {
-			switch (err.Error()) {
-			case GIT_ERR_REPO_EMPTY:
-				repos[i].Description += " (not backed up - empty repository)"
-				continue
-			default:
-				return "Fetching Error", err
-			}
+			// Fetch failures are usually caused by invalid repositories or destinations (e.g. empty repositories)
+			// Errors are reported directly to the enduser
+			repo.BackupState = false
+			repo.BackupMessage = err.Error()
+			log.Printf("Fetch Error: %v\n", err)
+			continue
 		}
+		
 		err = PushRepository(repo.FullName, bucketName, bucketSess, repoBytes)
 		if err!=nil {
-			return "Pushing Error", err
+			// Push failures are usually caused by internal infrastructure failure / misconfiguration
+			// Errors are not reported to the enduser
+			repo.BackupState = false
+			repo.BackupMessage = "Internal infrastructure failure, check lambda log!"
+			log.Printf("Push Error: %v\n", err)
+			continue
 		}
 	}	
 

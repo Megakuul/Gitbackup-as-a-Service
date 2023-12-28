@@ -15,7 +15,7 @@
     <p class="subtitle">Explore and download all backed-up repositories conveniently packaged in <b>.zip</b> format.</p>
     <p class="subtitle">This page is maintained and managed by <a href="https://github.com/megakuul/gitbackup-as-a-service">GBaaS</a>.</p>
   
-    <center style="display: flex; flex-direction: row; justify-content: center; align-items: center; margin-top: 2rem; ">
+    <center style="display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center;">
       <div class="description">
         To fetch repositories from this page,<br>
         download them and execute<br>
@@ -32,6 +32,7 @@
   <style>
     body {
       background-color: hsl(210 50% 12%);
+      overflow-x: hidden;
     }
     .title {
       text-align: center;
@@ -68,6 +69,7 @@
       width: min-content;
 
       border-radius: 12px;
+      margin-top: 2rem;
       margin-left: 1rem;
       padding: 0.8rem 2.2rem 0.8rem 1.7rem;
       color: rgba(255,255,255,0.3);
@@ -75,6 +77,7 @@
     .description {
       color: rgba(255,255,255,0.3);
       text-align: start;
+      margin-top: 2rem;
       margin-right: 1rem;
       white-space: nowrap;
       width: min-content;
@@ -137,6 +140,22 @@
     .repo .repo-body .repo-info img {
       rotate: 45deg;
     }
+    .repo .repo-report {
+      margin-top: 1rem;
+      padding: 0.5rem;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: start;
+      border-radius: 8px;
+    }
+    .repo .repo-report.green {
+      background-color: rgba(7, 245, 1, 0.1);
+    }
+    .repo .repo-report.red {
+      background-color: rgba(245, 9, 1, 0.1);
+    }
 
     .error {
       background-color: rgba(245, 9, 1, 0.5);
@@ -167,7 +186,11 @@
                     <p>${repo.language}</p>
                     <img src="${repo.fork ? 'fork.png' : 'nofork.png'}" alt="${repo.fork ? 'Fork' : 'No Fork'}" height="50" >
                   </div>
-                </div>  
+                </div>
+                <div class="repo-report ${repo.backupstate ? "green" : "red"}">
+                  <p>${repo.backupdate}</p>
+                  <p>${repo.backupmessage}</p>  
+                </div>
               `;
               
               repoListElement.appendChild(repoElement);
