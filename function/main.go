@@ -274,17 +274,17 @@ func StartJob(ctx context.Context) (string, error) {
 
 	// Repos are backed up one by one, if performance matters, this can be done async aswell.
 	// Just be aware that this will lead to more memory usage -> more network bandwidth -> higher AWS bill -> AA (Anonymous AWS debtors) therapy sessions
-	for _, repo := range repos {
-		repo.BackupState = true
-		repo.BackupMessage = "Backup successful"
-		repo.BackupDate = date
+	for i, repo := range repos {
+		repos[i].BackupState = true
+		repos[i].BackupMessage = "Backup successful"
+		repos[i].BackupDate = date
 		
 		repoBytes, err := FetchRepository(repo.CloneUrl)
 		if err!=nil {
 			// Fetch failures are usually caused by invalid repositories or destinations (e.g. empty repositories)
 			// Errors are reported directly to the enduser
-			repo.BackupState = false
-			repo.BackupMessage = err.Error()
+			repos[i].BackupState = false
+			repos[i].BackupMessage = err.Error()
 			log.Printf("Fetch Error: %v\n", err)
 			continue
 		}
@@ -293,8 +293,8 @@ func StartJob(ctx context.Context) (string, error) {
 		if err!=nil {
 			// Push failures are usually caused by internal infrastructure failure / misconfiguration
 			// Errors are not reported to the enduser
-			repo.BackupState = false
-			repo.BackupMessage = "Internal infrastructure failure, check lambda log!"
+			repos[i].BackupState = false
+			repos[i].BackupMessage = "Internal infrastructure failure, check lambda log!"
 			log.Printf("Push Error: %v\n", err)
 			continue
 		}
