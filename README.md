@@ -113,7 +113,30 @@ The Workflow will do the following steps:
 
 ### Advanced Setup
 
-At this point, the application is running and can be accessed via the S3 URL. For a more user-friendly experience, I also recommend placing a CloudFront instance with its own SSL certificate in front of the bucket (instance must be pointing to "/web/index.html").
+At this point, the application is running and can be accessed via the S3 URL. For a more user-friendly experience, I also recommend placing a CloudFront instance with its own SSL certificate in front of the bucket.
+
+Recommended settings for CloudFront are:
+- Behaviour for Default(*):
+  - GET, HEAD
+  - CachingOptimized
+  - CORS-S3Origin
+  - SimpleCORS
+- Behaviour for /repos/*:
+  - GET, HEAD
+  - CachingDisabled
+  - CORS-S3Origin
+  - SimpleCORS
+- Behaviour for /web/repos.json:
+  - GET, HEAD
+  - CachingDisabled
+  - CORS-S3Origin
+  - SimpleCORS
+- Main Origin:
+  - Path: /
+  - Access: Public
+  - Disable Origin Shield
+- Default root object:
+  - /web/index.html
 
 
 If you need to back up large repositories, you may need to change the memory configuration of the Lambda function (BackupFunction→Properties→MemorySize). The size is set to 512 MB by default, this is usually required due to CPU-heavy operations like the compression of the repositories.

@@ -168,7 +168,7 @@
   
   <script>
     const repoListElement = document.getElementById('repoList');
-    fetch("repos.json")
+    fetch("/web/repos.json")
       .then(response => response.json())
       .then(data => {
           data.forEach(repo => {
