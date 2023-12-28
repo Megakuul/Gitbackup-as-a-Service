@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Github Backup</title>
+    <link rel="icon" type="image/x-icon" href="/web/favicon.ico">
     <meta name="description" content="Discover and explore my archived GitHub repositories. Page is managed by GBaaS">
     <meta name="keywords" content="Backup, Git, Github, Archive, GBaaS, Gitbackup-as-a-Service">
   </head>
@@ -184,7 +185,7 @@
                   </div>
                   <div class="repo-info">
                     <p>${repo.language}</p>
-                    <img src="${repo.fork ? 'fork.png' : 'nofork.png'}" alt="${repo.fork ? 'Fork' : 'No Fork'}" height="50" >
+                    <img src="${repo.fork ? '/web/fork.png' : '/web/nofork.png'}" alt="${repo.fork ? 'Fork' : 'No Fork'}" height="50" >
                   </div>
                 </div>
                 <div class="repo-report ${repo.backupstate ? "green" : "red"}">
@@ -201,7 +202,7 @@
           errorElement.className = 'error'
           errorElement.innerHTML = `
             <h2>Error Occured</h2>
-            <p>Repository information at <b>/web/repo.json</b> is not accessible</p>
+            <p>Repository information at <b>/web/repos.json</b> is not accessible</p>
           `;
           
           repoListElement.appendChild(errorElement);

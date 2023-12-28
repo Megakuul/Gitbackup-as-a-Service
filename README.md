@@ -136,7 +136,7 @@ Recommended settings for CloudFront are:
   - Access: Public
   - Disable Origin Shield
 - Default root object:
-  - /web/index.html
+  - web/index.html
 
 
 If you need to back up large repositories, you may need to change the memory configuration of the Lambda function (BackupFunction→Properties→MemorySize). The size is set to 512 MB by default, this is usually required due to CPU-heavy operations like the compression of the repositories.
