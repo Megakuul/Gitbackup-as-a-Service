@@ -109,10 +109,18 @@ Resources:
           - Action:
               - 's3:GetReplicationConfiguration'
               - 's3:ListBucket'
-              - 's3:GetObjectVersion'
+            Effect: Allow
+            Resource: !Sub 'arn:aws:s3:::${CoreBucket}'
+          - Action:
+              - 's3:GetObjectVersionForReplication'
               - 's3:GetObjectVersionAcl'
+              - 's3:GetObjectVersionTagging'
+            Effect: Allow
+            Resource: !Sub 'arn:aws:s3:::${CoreBucket}/*'
+          - Action:
               - 's3:ReplicateObject'
               - 's3:ReplicateDelete'
+              - 's3:ReplicateTags'
             Effect: Allow
             Resource: !Sub 'arn:aws:s3:::${DeepArchiveBucket}/*'
             
